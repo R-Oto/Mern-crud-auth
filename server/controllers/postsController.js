@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Post from "../models/postsModel.js";
+import User from "../models/usersModel.js";
 
 export const getPost = async (req, res) => {
     try {
@@ -12,16 +13,22 @@ export const getPost = async (req, res) => {
 
 export const addPost = async (req, res) => {
     const { title, body } = req.body;
+    res.json(req.user)
+
     if (!title || !body) {
         return res.status(400).json({ error: "All fields are required" });
     }
+
+    const user = await User.findById(req.user._id)
+
     try {
-        const post = await Post.create({ title, body });
+        const post = await Post.create({ user: user._id, title, body }); 
         res.status(201).json({ message: "Post Created", post });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 };
+
 
 export const deletePost = async (req, res) => {
     const { id } = req.params;
@@ -54,7 +61,11 @@ export const updatePost = async (req, res) => {
     try {
         const post = await Post.findById(id);
         if (!post) {
-            return res.status(404).json({ error: "Post not found" });
+            return res.status(400).json({ error: "Post not found" });
+        }
+
+        if(post.user.equals(user._id)){
+            return res.status(401).json({ error: "Post not found" });
         }
 
         // Update the post with the new data
